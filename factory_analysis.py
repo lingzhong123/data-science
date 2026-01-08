@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # --- 1. Page Config ---
-st.set_page_config(page_title="Case Study 2026", layout="wide")
+st.set_page_config(page_title="Case Analysis Chunling Zhong", layout="wide")
 
 # --- 2. Data Loading ---
 @st.cache_data
@@ -38,62 +38,69 @@ def load_data():
 
 df, df_raw, fixed_items, variable_items = load_data()
 
-st.title("📊  Cost Analysis ")
+st.title("📊 Factory Strategic Cost Audit Report (2024-2026)")
 
-# --- NEW: RAW DATA TOGGLE WINDOW ---
-with st.expander("🔍 Click to View Data Table"):
-    st.write("Full dataset including historical actuals and future forecasts:")
-    st.dataframe(df_raw.style.format("{:,.0f}")) # 格式化数字，增加千分位
-    st.caption("All values in USD, except Exchange Rate.")
+with st.expander("🔍 View Raw Financial Data"):
+    st.dataframe(df_raw.style.format("{:,.0f}"))
 
 st.divider()
 
 # --- MODULE 1: COST CLASSIFICATION ---
-st.header("1. Cost Classification")
+st.header("1. Cost Classification ")
 c1, c2 = st.columns(2)
 with c1:
-    st.subheader("📌 Fixed Cost Items")
-    st.info("\n".join([f"- {i}" for i in fixed_items]))
+    st.info("**Fixed Costs:**\n" + "\n".join([f"- {i}" for i in fixed_items]))
 with c2:
-    st.subheader("⚡ Variable Cost Items")
-    st.warning("\n".join([f"- {i}" for i in variable_items]))
+    st.warning("**Variable Costs:**\n" + "\n".join([f"- {i}" for i in variable_items]))
 
-st.subheader("Cost vs. Production Volume Trends")
-# Normalized Trend Line
 df_norm = df[['Total_Cost', 'Total Sales Qty']].apply(lambda x: x / x.iloc[0] * 100)
-fig_trend = px.line(df_norm, title="Relative Growth: Total Cost vs. Sales Qty (Baseline Q1'24 = 100)")
-fig_trend.add_vline(x=8, line_dash="dash", line_color="red") 
-st.plotly_chart(fig_trend, use_container_width=True)
+st.plotly_chart(px.line(df_norm, title="Growth Index: Total Cost vs. Sales Qty (Q1'24 = 100)"), use_container_width=True)
 
 # --- MODULE 2: COST SAVING OPPORTUNITIES ---
 st.header("2. Cost Saving Opportunities")
 
-# A. Pie Chart Comparison
-st.subheader("A. Structural Shift: Actual (Avg) vs. Forecast (Q1'26)")
-col_a, col_b = st.columns(2)
+# NEW: Variance Analysis Bridge Chart
+st.subheader("A. Variance Analysis: Q4'25 vs. Q1'26 Spending Bridge")
+
+# Calculate Bridge Data
+q4_vals = df.loc["Q4'25", fixed_items + variable_items]
+q1_vals = df.loc["Q1'26", fixed_items + variable_items]
+bridge_diff = (q1_vals - q4_vals).to_dict()
+
+# Prepare Waterfall Components
+x_labels = ["Q4'25 Total"] + list(bridge_diff.keys()) + ["Q1'26 Total"]
+measure = ["absolute"] + ["relative"] * len(bridge_diff) + ["total"]
+y_values = [df.loc["Q4'25", 'Total_Cost']] + list(bridge_diff.values()) + [0] # 0 for total calc
+
+fig_bridge = go.Figure(go.Waterfall(
+    name="Spending Bridge", orientation="v",
+    measure=measure, x=x_labels, y=y_values,
+    connector={"line":{"color":"rgb(63, 63, 63)"}},
+    increasing={"marker":{"color":"#EF553B"}}, # Red for cost increase
+    decreasing={"marker":{"color":"#00CC96"}}, # Green for savings
+    totals={"marker":{"color":"#636EFA"}}
+))
+fig_bridge.update_layout(title="Total Spending Bridge (USD Increase/Decrease)", showlegend=False)
+st.plotly_chart(fig_bridge, use_container_width=True)
+
+
+
+# Structural Shift and FX Exposure (Combined in columns for space)
+col_pie1, col_pie2 = st.columns(2)
 actual_avg = df.loc["Q1'24":"Q4'25"].mean()
-with col_a:
+with col_pie1:
     st.plotly_chart(px.pie(values=[actual_avg['Fixed_Cost'], actual_avg['Variable_Cost']], names=['Fixed', 'Variable'], title="Historical Avg Structure", hole=0.4), use_container_width=True)
-with col_b:
+with col_pie2:
     st.plotly_chart(px.pie(values=[df.loc["Q1'26", 'Fixed_Cost'], df.loc["Q1'26", 'Variable_Cost']], names=['Fixed', 'Variable'], title="Q1'26 Forecast Structure", hole=0.4), use_container_width=True)
 
-# B. Cost Drivers
-st.subheader("B. Cost Growth Contribution (Q4'25 to Q1'26)")
-q4_25 = df.loc["Q4'25", variable_items + fixed_items]
-q1_26 = df.loc["Q1'26", variable_items + fixed_items]
-diff = (q1_26 - q4_25).sort_values(ascending=False)
-fig_diff = px.bar(diff, title="Absolute USD Increase per Element", color=diff.values, labels={'value':'USD Increase', 'index':'Category'})
-st.plotly_chart(fig_diff, use_container_width=True)
-
-# C. Exchange Rate vs CPU
-st.subheader("C. FX Exposure & Unit Cost Trend")
+st.subheader("B. FX Exposure & Unit Cost Trend")
 fig_fx = go.Figure()
-fig_fx.add_trace(go.Scatter(x=df.index, y=df['Exchange Rate'], name="Exchange Rate (USD/MYR)", yaxis="y1"))
-fig_fx.add_trace(go.Scatter(x=df.index, y=df['CPU_USD'], name="Unit Cost (USD)", yaxis="y2"))
-fig_fx.update_layout(yaxis=dict(title="FX Rate"), yaxis2=dict(title="CPU USD", overlaying='y', side='right'))
+fig_fx.add_trace(go.Scatter(x=df.index, y=df['Exchange Rate'], name="USD/MYR Rate", yaxis="y1"))
+fig_fx.add_trace(go.Scatter(x=df.index, y=df['CPU_USD'], name="CPU (USD)", yaxis="y2"))
+fig_fx.update_layout(yaxis=dict(title="Exchange Rate"), yaxis2=dict(title="Unit Cost", overlaying='y', side='right'))
 st.plotly_chart(fig_fx, use_container_width=True)
 
-st.success("**Summary of Saving Opportunities:** Focus on **Labor Efficiency** (biggest grower) and **Utility Consumption**. Manage **FX exposure** to mitigate unit cost fluctuations.")
+st.success("**Key Opportunities:** The Bridge reveals **Labor** and **Utilities** as the primary drivers of Q1 budget variance. Management should prioritize efficiency audits in these two areas.")
 
 # --- MODULE 3: PROPOSAL OR RECOMMENDATION ---
 st.header("3. Strategic Recommendations & Challenges")
@@ -105,4 +112,9 @@ recommendations = [
     {"Category": "Maintenance", "Red Flags": "Static at $250 for 3 years despite rising depreciation & output.", "Proposed Action": "Verify why costs are static while asset usage and production volume increase."}
 ]
 
-st.table(pd.DataFrame(recommendations))
+rec_df = pd.DataFrame(recommendations)
+st.table(rec_df)
+
+# Download Button
+csv = rec_df.to_csv(index=False).encode('utf-8')
+st.download_button(label="📥 Download Recommendations as CSV", data=csv, file_name='factory_audit_recommendations.csv', mime='text/csv')
