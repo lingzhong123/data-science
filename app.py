@@ -194,7 +194,7 @@ class LazadaStreamlitApp:
 
 def main():
     # 应用标题
-    st.markdown('<h1 class="main-header">🛒 Lazada E-Commerce Analysis</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🛒 Lazada E-Commerce Promotion Analysis</h1>', unsafe_allow_html=True)
 
     # 初始化应用
     app = LazadaStreamlitApp()
