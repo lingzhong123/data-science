@@ -27,8 +27,8 @@ def load_data():
     df_raw = pd.DataFrame(data).set_index("Metric")
     df = df_raw.T
     
-    fixed_cols = ["Labor Cost - Engineer and Management", "Rent", "Janitor", "Machine Maintainance Cost", "Insurance", "Depreciation"]
-    var_cols = ["Labor Cost - Operator", "Travel", "Company Transportation", "Utilities Electricity", "Material Cost", "Freight"]
+    fixed_cols = ["Labor Cost - Engineer and Management", "Rent", "Janitor",  "Company Transportation", "Machine Maintainance Cost", "Insurance", "Depreciation"]
+    var_cols = ["Labor Cost - Operator", "Travel", "Utilities Electricity", "Material Cost", "Freight"]
     
     df['Fixed_Cost'] = df[fixed_cols].sum(axis=1)
     df['Variable_Cost'] = df[var_cols].sum(axis=1)
