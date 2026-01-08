@@ -109,7 +109,7 @@ except ImportError:
 st.subheader("Strategic Recommendations:")
 with st.expander("Click to view specific challenges for Cost Owners"):
     st.markdown(f"""
-    - **Challenge Production Manager (Q1'26):** Your forecasted Variable Cost Elasticity is **{df.loc['Q1'26', 'Elasticity']:.2f}**. Why is labor/utility cost growing faster than production? 
+    - **Challenge Production Manager (Q1'26):** Your forecasted Variable Cost Elasticity is **{df.loc["Q1'26", "Elasticity"]:.2f}**. Why is labor/utility cost growing faster than production?
     - **Utility Audit:** Quarters like Q2'25 and Q1'26 show consumption far above the trendline. Inspect for machine idle time or energy leaks.
     - **Investment Validation:** Depreciation rose 70%. If the new machinery doesn't lower the 'Operator CPU' in 2026, the ROI is negative. 
     """)
