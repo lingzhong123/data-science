@@ -38,7 +38,7 @@ def load_data():
 
 df, df_raw, fixed_items, variable_items = load_data()
 
-st.title("📊 Factory Strategic Cost Audit Report (2024-2026)")
+st.title("📊  Cost Analysis (2024-2026)")
 
 with st.expander("🔍 View Raw Financial Data"):
     st.dataframe(df_raw.style.format("{:,.0f}"))
