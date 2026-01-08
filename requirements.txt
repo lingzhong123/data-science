@@ -1,4 +1,5 @@
 pandas
 plotly
 streamlit
+statsmodels
 scikit-learn
