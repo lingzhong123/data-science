@@ -3,12 +3,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# --- 1. Page Configuration ---
-st.set_page_config(page_title="Factory Cost Audit Dashboard", layout="wide")
+# --- 1. Page Config ---
+st.set_page_config(page_title="Case analysis", layout="wide")
 
-# --- 2. Data Processing ---
+# --- 2. Data Loading ---
 @st.cache_data
-def load_and_process_data():
+def load_data():
     data = {
         "Metric": ["Labor Cost - Engineer and Management", "Labor Cost - Operator", "Travel", "Company Transportation", "Rent", "Utilities Electricity", "Janitor", "Material Cost", "Machine Maintainance Cost", "Freight", "Insurance", "Depreciation", "Total Sales Qty", "Exchange Rate"],
         "Q1'24": [100, 2000, 20, 200, 40, 2500, 50, 750, 250, 125, 50, 1000, 25000, 4.78],
@@ -25,110 +25,75 @@ def load_and_process_data():
         "Q4'26": [132, 4540, 15, 356, 47, 3697, 59, 989, 250, 165, 55, 1700, 32981, 4.05],
     }
     df = pd.DataFrame(data).set_index("Metric").T
+    fixed_cols = ["Labor Cost - Engineer and Management", "Rent", "Janitor", "Machine Maintainance Cost", "Insurance", "Depreciation"]
+    var_cols = ["Labor Cost - Operator", "Travel", "Company Transportation", "Utilities Electricity", "Material Cost", "Freight"]
     
-    fixed_items = ["Labor Cost - Engineer and Management", "Rent", "Janitor", "Machine Maintainance Cost", "Insurance", "Depreciation"]
-    variable_items = ["Labor Cost - Operator", "Travel", "Company Transportation", "Utilities Electricity", "Material Cost", "Freight"]
-    
-    df['Fixed_Cost'] = df[fixed_items].sum(axis=1)
-    df['Variable_Cost'] = df[variable_items].sum(axis=1)
+    df['Fixed_Cost'] = df[fixed_cols].sum(axis=1)
+    df['Variable_Cost'] = df[var_cols].sum(axis=1)
     df['Total_Cost'] = df['Fixed_Cost'] + df['Variable_Cost']
-    
-    return df, fixed_items, variable_items
+    df['CPU_USD'] = df['Total_Cost'] / df['Total Sales Qty']
+    return df, fixed_cols, var_cols
 
-df, fixed_items, variable_items = load_and_process_data()
+df, fixed_items, variable_items = load_data()
 
-# --- 3. Header ---
-st.title("🏭 Factory Financial Cost Audit Dashboard")
-st.markdown("### Strategic Cost Management (2024 - 2026)")
+st.title("📊 Cost Report (2024-2026)")
 st.divider()
 
-# --- 4. Cost Classification Panel ---
+# --- MODULE 1: COST CLASSIFICATION ---
 st.header("1. Cost Classification Analysis")
-col_f, col_v = st.columns(2)
-
-with col_f:
+c1, c2 = st.columns(2)
+with c1:
     st.subheader("📌 Fixed Cost Items")
-    st.info("\n".join([f"- {item}" for item in fixed_items]))
-
-with col_v:
+    st.info("\n".join([f"- {i}" for i in fixed_items]))
+with c2:
     st.subheader("⚡ Variable Cost Items")
-    st.warning("\n".join([f"- {item}" for item in variable_items]))
+    st.warning("\n".join([f"- {i}" for i in variable_items]))
 
-# --- 5. 3-Year Cost Trend Line Chart (FIXED ERROR) ---
-st.header("2. 3-Year Cost Evolution (Actual vs. Forecast)")
+st.subheader("Cost vs. Production Volume Trends")
+# Normalized Trend Line
+df_norm = df[['Total_Cost', 'Total Sales Qty']].apply(lambda x: x / x.iloc[0] * 100)
+fig_trend = px.line(df_norm, title="Relative Growth: Total Cost vs. Sales Qty (Baseline = 100)")
+fig_trend.add_vline(x=8, line_dash="dash", line_color="red") # Q1'26 split
+st.plotly_chart(fig_trend, use_container_width=True)
 
-trend_fig = go.Figure()
-trend_fig.add_trace(go.Scatter(x=df.index, y=df['Total_Cost'], name='Total Cost', line=dict(color='black', width=3)))
-trend_fig.add_trace(go.Scatter(x=df.index, y=df['Variable_Cost'], name='Variable Cost', line=dict(color='#F39C12', width=2)))
-trend_fig.add_trace(go.Scatter(x=df.index, y=df['Fixed_Cost'], name='Fixed Cost', line=dict(color='#2E86C1', width=2)))
+# --- MODULE 2: COST SAVING OPPORTUNITIES ---
+st.header("2. Cost Saving Opportunities")
 
-# Get the numeric index of Q1'26 to place the vertical line safely
-try:
-    forecast_idx = list(df.index).index("Q1'26")
-    trend_fig.add_vline(x=forecast_idx, line_dash="dash", line_color="red")
-    # Add annotation separately to avoid the mean() calculation error
-    trend_fig.add_annotation(x=forecast_idx, y=df['Total_Cost'].max(),
-                text="Forecast Starts", showarrow=False, xanchor="left", font=dict(color="red"))
-except ValueError:
-    pass
-
-trend_fig.update_layout(
-    title="Cost Trends: Historical Actuals vs. 2026 Projections",
-    xaxis_title="Quarter",
-    yaxis_title="Amount (USD)",
-    hovermode="x unified",
-    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-)
-
-st.plotly_chart(trend_fig, use_container_width=True)
-
-# --- 6. Structure Comparison ---
-st.header("3. Cost Mix Comparison")
-col1, col2 = st.columns(2)
-
+# A. Pie Chart Comparison
+st.subheader("A. Structural Shift: Actual (Avg) vs. Forecast (Q1'26)")
+col_a, col_b = st.columns(2)
 actual_avg = df.loc["Q1'24":"Q4'25"].mean()
-forecast_q126 = df.loc["Q1'26"]
+with col_a:
+    st.plotly_chart(px.pie(values=[actual_avg['Fixed_Cost'], actual_avg['Variable_Cost']], names=['Fixed', 'Variable'], title="Historical Avg Structure", hole=0.4), use_container_width=True)
+with col_b:
+    st.plotly_chart(px.pie(values=[df.loc["Q1'26", 'Fixed_Cost'], df.loc["Q1'26", 'Variable_Cost']], names=['Fixed', 'Variable'], title="Q1'26 Forecast Structure", hole=0.4), use_container_width=True)
 
-with col1:
-    fig_actual = go.Figure(data=[go.Pie(
-        labels=['Fixed Costs', 'Variable Costs'],
-        values=[actual_avg['Fixed_Cost'], actual_avg['Variable_Cost']],
-        hole=.4, title="Historical Avg (24-25)",
-        marker_colors=['#2E86C1', '#F39C12']
-    )])
-    st.plotly_chart(fig_actual, use_container_width=True)
+# B. Cost Drivers (Waterfall/Bar)
+st.subheader("B. Cost Growth Contribution (Q4'25 to Q1'26)")
+q4_25 = df.loc["Q4'25", variable_items + fixed_items]
+q1_26 = df.loc["Q1'26", variable_items + fixed_items]
+diff = (q1_26 - q4_25).sort_values(ascending=False)
+fig_diff = px.bar(diff, title="Absolute USD Increase per Element", color=diff.values, labels={'value':'USD Increase', 'index':'Category'})
+st.plotly_chart(fig_diff, use_container_width=True)
 
-with col2:
-    fig_forecast = go.Figure(data=[go.Pie(
-        labels=['Fixed Costs', 'Variable Costs'],
-        values=[forecast_q126['Fixed_Cost'], forecast_q126['Variable_Cost']],
-        hole=.4, title="Forecast Q1'26",
-        marker_colors=['#1B4F72', '#D68910']
-    )])
-    st.plotly_chart(fig_forecast, use_container_width=True)
+# C. Exchange Rate vs CPU
+st.subheader("C. FX Exposure & Unit Cost Trend")
+fig_fx = go.Figure()
+fig_fx.add_trace(go.Scatter(x=df.index, y=df['Exchange Rate'], name="Exchange Rate (USD/MYR)", yaxis="y1"))
+fig_fx.add_trace(go.Scatter(x=df.index, y=df['CPU_USD'], name="Unit Cost (USD)", yaxis="y2"))
+fig_fx.update_layout(yaxis=dict(title="FX Rate"), yaxis2=dict(title="CPU USD", overlaying='y', side='right'))
+st.plotly_chart(fig_fx, use_container_width=True)
 
-# --- 7. Efficiency Audit Panel ---
-st.header("4. Audit & Performance Inquiries")
+st.success("**Summary of Saving Opportunities:** Focus on **Labor Efficiency** (biggest grower) and **Utility Consumption** during peak quarters. Manage **FX exposure** as the MYR strengthens, impacting local purchasing power.")
 
-# Efficiency calculations
-df['Qty_Change'] = df['Total Sales Qty'].pct_change()
-df['VC_Change'] = df['Variable_Cost'].pct_change()
-df['Elasticity'] = df['VC_Change'] / df['Qty_Change']
+# --- MODULE 3: PROPOSAL OR RECOMMENDATION ---
+st.header("3. Strategic Recommendations & Challenges")
 
-bad_planning = df[df['Elasticity'] > 1.15][['Total Sales Qty', 'Variable_Cost', 'Elasticity']]
+recommendations = [
+    {"Category": "Labor Cost - Operator", "Red Flags": "High Q1'26 forecast despite new equipment; similar Q3/Q4 patterns in past.", "Proposed Action": "Check for overestimated OT or underestimated efficiency gains from new equipment."},
+    {"Category": "Total Sales Qty", "Red Flags": "Q1'26 growth deviates from historical seasonality.", "Proposed Action": "Provide business drivers for Q1 peak (e.g., new orders) or align with history."},
+    {"Category": "Travel & Transport", "Red Flags": "Fixed annual values ($15/$356) suggest lack of activity-based planning.", "Proposed Action": "Provide a 2026 travel plan or activity-based forecast for justification."},
+    {"Category": "Maintenance", "Red Flags": "Static at $250 for 3 years despite rising depreciation & output.", "Proposed Action": "Verify why costs are static while asset usage and production volume increase."}
+]
 
-st.subheader("Efficiency Tracker (Variable Cost Elasticity)")
-st.write("Quarters where Variable Costs scale significantly faster than Production Volume:")
-
-try:
-    st.dataframe(bad_planning.style.background_gradient(cmap='Reds', subset=['Elasticity']).format("{:.2f}", subset=['Elasticity']))
-except:
-    st.dataframe(bad_planning)
-
-with st.expander("Strategic Audit Questions"):
-    # Reference value safely
-    q1_26_val = df.loc["Q1'26", "Elasticity"]
-    st.markdown(f"""
-    - **Operational Efficiency:** The elasticity for Q1'26 is **{q1_26_val:.2f}**. This indicates a loss of economies of scale. 
-    - **Fixed Overhead:** Fixed costs are rising despite no significant increase in base capacity. Justify the $1,700 Depreciation forecast.
-    """)
+st.table(pd.DataFrame(recommendations))
