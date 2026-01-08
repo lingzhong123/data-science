@@ -33,30 +33,27 @@ def load_and_process_data():
     df['Variable_Cost'] = df[variable_items].sum(axis=1)
     df['Total_Cost'] = df['Fixed_Cost'] + df['Variable_Cost']
     df['CPU_USD'] = df['Total_Cost'] / df['Total Sales Qty']
-    
-    # Elasticity Calculation (Cost Change % / Qty Change %)
     df['Elasticity'] = df['Variable_Cost'].pct_change() / df['Total Sales Qty'].pct_change()
     return df
 
 df = load_and_process_data()
 
 # --- 3. Header ---
-st.title("🏭 Garment Factory Survival & Cost Audit")
-st.info("Analysis Focus: Cost structure efficiency, saving opportunities, and forecast validation.")
+st.title("🏭 Factory Financial Audit Dashboard")
+st.info("Goal: Contrast Historical Reality vs. Forecasted Efficiency.")
 
-# --- 4. Identify Fixed & Variable Costs (Comparison) ---
-st.header("1. Cost Structure: Actual (24-25) vs. Forecast (Q1'26)")
+# --- 4. Section 1: Structure Comparison ---
+st.header("1. Cost Mix: Historical Avg (2024-25) vs. Forecast (Q1'26)")
 col1, col2 = st.columns(2)
 
-# Calculation for Comparison
-actual_data = df.loc["Q1'24":"Q4'25"].mean()
+actual_avg = df.loc["Q1'24":"Q4'25"].mean()
 forecast_q126 = df.loc["Q1'26"]
 
 with col1:
     fig_actual = go.Figure(data=[go.Pie(
         labels=['Fixed Costs', 'Variable Costs'],
-        values=[actual_data['Fixed_Cost'], actual_data['Variable_Cost']],
-        hole=.4, title="Actual Avg (2024-25)",
+        values=[actual_avg['Fixed_Cost'], actual_avg['Variable_Cost']],
+        hole=.4, title="Historical Avg (24-25)",
         marker_colors=['#2E86C1', '#F39C12']
     )])
     st.plotly_chart(fig_actual, use_container_width=True)
@@ -70,54 +67,48 @@ with col2:
     )])
     st.plotly_chart(fig_forecast, use_container_width=True)
 
-# --- 5. Cost Saving Opportunities ---
-st.header("2. Saving Opportunities & Efficiency Leakage")
+# --- 5. Section 2: Efficiency Audit ---
+st.header("2. Saving Opportunities & Efficiency Audit")
 col3, col4 = st.columns(2)
 
 with col3:
-    st.subheader("Utility Efficiency Audit")
-    # Scatter plot with OLS trendline to find outliers
+    st.subheader("Utility Consumption Audit")
     fig_leak = px.scatter(df, x="Total Sales Qty", y="Utilities Electricity", 
                           trendline="ols", size="CPU_USD", color="CPU_USD",
-                          title="Electricity Consumption vs. Production Volume")
+                          title="Electricity vs Production Trend")
     st.plotly_chart(fig_leak, use_container_width=True)
-    st.caption("Dots above the line indicate inefficient power usage for that production level.")
 
 with col4:
-    st.subheader("Automation ROI (Labor CPU)")
+    st.subheader("Labor Cost per Unit (CPU)")
     df['Operator_CPU'] = df['Labor Cost - Operator'] / df['Total Sales Qty']
-    fig_roi = px.line(df, y='Operator_CPU', markers=True, 
-                      title="Unit Labor Cost Trend (USD)")
+    fig_roi = px.line(df, y='Operator_CPU', markers=True, title="Unit Labor Cost Trend (USD)")
     st.plotly_chart(fig_roi, use_container_width=True)
 
-# --- 6. Proposal & Challenge Back ---
-st.header("3. Challenges to Cost Owners (Audit Panel)")
-
-# Identify inefficient quarters (Elasticity > 1.15)
+# --- 6. Section 3: Audit & Challenges ---
+st.header("3. Executive Audit Panel")
 bad_planning = df[df['Elasticity'] > 1.15][['Total Sales Qty', 'Variable_Cost', 'Elasticity']]
 
 try:
-    # Stylized dataframe for visual highlighting
     st.dataframe(
         bad_planning.style.background_gradient(cmap='Reds', subset=['Elasticity'])
         .format("{:.2f}", subset=['Elasticity'])
     )
-except ImportError:
-    st.warning("Install 'matplotlib' to enable table color gradients.")
+except Exception:
     st.dataframe(bad_planning)
 
-st.subheader("Strategic Recommendations:")
-with st.expander("Click to view specific challenges for Cost Owners"):
+st.subheader("Strategic Challenges:")
+with st.expander("Specific Questions for Cost Owners"):
+    # Corrected quotes for Q1'26 index
+    elasticity_val = df.loc["Q1'26", "Elasticity"]
     st.markdown(f"""
-    - **Challenge Production Manager (Q1'26):** Your forecasted Variable Cost Elasticity is **{df.loc["Q1'26", "Elasticity"]:.2f}**. Why is labor/utility cost growing faster than production?
-    - **Utility Audit:** Quarters like Q2'25 and Q1'26 show consumption far above the trendline. Inspect for machine idle time or energy leaks.
-    - **Investment Validation:** Depreciation rose 70%. If the new machinery doesn't lower the 'Operator CPU' in 2026, the ROI is negative. 
+    - **Production Manager (Q1'26 Forecast):** The Variable Cost Elasticity is **{elasticity_val:.2f}**. Why are costs scaling faster than production volume?
+    - **Engineering Dept:** Points significantly above the regression line in the Utility Audit indicate wasted energy or poor machine scheduling.
+    - **Finance (Automation ROI):** Despite higher depreciation, Unit Labor Cost (CPU) is not showing significant reduction in 2026.
     """)
 
 # --- Sidebar Survival Check ---
-st.sidebar.header("Survival Test (Malaysia Market)")
-mock_fx = st.sidebar.slider("Simulated FX (USD/MYR)", 3.80, 5.00, 4.05)
-q1_26_cost_myr = df.loc['Q1'26, 'CPU_USD'] * mock_fx
-st.sidebar.metric("Simulated Unit Cost (MYR)", f"RM {q1_26_cost_myr:.2f}")
-if q1_26_cost_myr > 1.50: # Assuming 1.50 is a danger threshold
-    st.sidebar.error("Warning: High cost exposure in MYR!")
+st.sidebar.header("Survival Test (MYR)")
+mock_fx = st.sidebar.slider("Simulated USD/MYR", 3.80, 5.00, 4.05)
+# FIXED SYNTAX: Double quotes for the index containing a single quote
+q1_26_myr = df.loc["Q1'26", "CPU_USD"] * mock_fx
+st.sidebar.metric("Simulated Unit Cost (MYR)", f"RM {q1_26_myr:.3f}")
