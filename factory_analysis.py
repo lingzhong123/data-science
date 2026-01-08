@@ -32,18 +32,52 @@ def load_and_process_data():
     df['Fixed_Cost'] = df[fixed_items].sum(axis=1)
     df['Variable_Cost'] = df[variable_items].sum(axis=1)
     df['Total_Cost'] = df['Fixed_Cost'] + df['Variable_Cost']
-    df['CPU_USD'] = df['Total_Cost'] / df['Total Sales Qty']
-    df['Elasticity'] = df['Variable_Cost'].pct_change() / df['Total Sales Qty'].pct_change()
-    return df
+    
+    return df, fixed_items, variable_items
 
-df = load_and_process_data()
+df, fixed_items, variable_items = load_and_process_data()
 
 # --- 3. Header ---
-st.title("🏭 Factory Financial Audit Dashboard")
-st.info("Goal: Contrast Historical Reality vs. Forecasted Efficiency.")
+st.title("🏭 Factory Financial Cost Audit Dashboard")
+st.markdown("### Strategic Cost Management (2024 - 2026)")
+st.divider()
 
-# --- 4. Section 1: Structure Comparison ---
-st.header("1. Cost Mix: Historical Avg (2024-25) vs. Forecast (Q1'26)")
+# --- 4. NEW: Cost Classification Display ---
+st.header("1. Cost Classification Definitions")
+col_f, col_v = st.columns(2)
+
+with col_f:
+    st.subheader("📌 Fixed Costs")
+    st.write("Costs that remain constant regardless of production volume:")
+    st.info("\n".join([f"- {item}" for item in fixed_items]))
+
+with col_v:
+    st.subheader("⚡ Variable Costs")
+    st.write("Costs that fluctuate in direct proportion to production:")
+    st.warning("\n".join([f"- {item}" for item in variable_items]))
+
+# --- 5. NEW: 3-Year Cost Trend Line Chart ---
+st.header("2. 3-Year Cost Evolution (Trend Analysis)")
+
+# Prepare data for line chart
+trend_fig = go.Figure()
+trend_fig.add_trace(go.Scatter(x=df.index, y=df['Total_Cost'], name='Total Cost', line=dict(color='black', width=4)))
+trend_fig.add_trace(go.Scatter(x=df.index, y=df['Variable_Cost'], name='Variable Cost', line=dict(color='#F39C12', width=2)))
+trend_fig.add_trace(go.Scatter(x=df.index, y=df['Fixed_Cost'], name='Fixed Cost', line=dict(color='#2E86C1', width=2)))
+
+trend_fig.update_layout(
+    title="Cost Trends: Actual (2024-2025) vs. Forecast (2026)",
+    xaxis_title="Quarter",
+    yaxis_title="Amount (USD)",
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+)
+# Add vertical line to separate Actual from Forecast
+trend_fig.add_vline(x="Q1'26", line_dash="dash", line_color="red", annotation_text="Forecast Starts")
+
+st.plotly_chart(trend_fig, use_container_width=True)
+
+# --- 6. Structure Comparison ---
+st.header("3. Cost Mix: Historical Avg vs. Forecast Q1'26")
 col1, col2 = st.columns(2)
 
 actual_avg = df.loc["Q1'24":"Q4'25"].mean()
@@ -67,48 +101,20 @@ with col2:
     )])
     st.plotly_chart(fig_forecast, use_container_width=True)
 
-# --- 5. Section 2: Efficiency Audit ---
-st.header("2. Saving Opportunities & Efficiency Audit")
-col3, col4 = st.columns(2)
+# --- 7. Efficiency Audit Panel ---
+st.header("4. Efficiency Audit & Audit Challenges")
 
-with col3:
-    st.subheader("Utility Consumption Audit")
-    fig_leak = px.scatter(df, x="Total Sales Qty", y="Utilities Electricity", 
-                          trendline="ols", size="CPU_USD", color="CPU_USD",
-                          title="Electricity vs Production Trend")
-    st.plotly_chart(fig_leak, use_container_width=True)
-
-with col4:
-    st.subheader("Labor Cost per Unit (CPU)")
-    df['Operator_CPU'] = df['Labor Cost - Operator'] / df['Total Sales Qty']
-    fig_roi = px.line(df, y='Operator_CPU', markers=True, title="Unit Labor Cost Trend (USD)")
-    st.plotly_chart(fig_roi, use_container_width=True)
-
-# --- 6. Section 3: Audit & Challenges ---
-st.header("3. Executive Audit Panel")
+# Efficiency calculations
+df['Elasticity'] = df['Variable_Cost'].pct_change() / df['Total Sales Qty'].pct_change()
 bad_planning = df[df['Elasticity'] > 1.15][['Total Sales Qty', 'Variable_Cost', 'Elasticity']]
 
-try:
-    st.dataframe(
-        bad_planning.style.background_gradient(cmap='Reds', subset=['Elasticity'])
-        .format("{:.2f}", subset=['Elasticity'])
-    )
-except Exception:
-    st.dataframe(bad_planning)
+st.subheader("Cost Elasticity Tracking")
+st.write("Tracking if Variable Costs scale efficiently with Production Volume.")
+st.dataframe(bad_planning.style.background_gradient(cmap='Reds', subset=['Elasticity']))
 
-st.subheader("Strategic Challenges:")
-with st.expander("Specific Questions for Cost Owners"):
-    # Corrected quotes for Q1'26 index
+with st.expander("Strategic Inquiries for Cost Owners"):
     elasticity_val = df.loc["Q1'26", "Elasticity"]
     st.markdown(f"""
-    - **Production Manager (Q1'26 Forecast):** The Variable Cost Elasticity is **{elasticity_val:.2f}**. Why are costs scaling faster than production volume?
-    - **Engineering Dept:** Points significantly above the regression line in the Utility Audit indicate wasted energy or poor machine scheduling.
-    - **Finance (Automation ROI):** Despite higher depreciation, Unit Labor Cost (CPU) is not showing significant reduction in 2026.
+    - **Production Manager:** Your forecasted Variable Cost Elasticity for Q1'26 is **{elasticity_val:.2f}**. Why are costs scaling faster than production? 
+    - **Infrastructure:** Fixed costs are creeping up in 2026 (Depreciation/Labor). Is this justified by a future drop in Unit Cost?
     """)
-
-# --- Sidebar Survival Check ---
-st.sidebar.header("Survival Test (MYR)")
-mock_fx = st.sidebar.slider("Simulated USD/MYR", 3.80, 5.00, 4.05)
-# FIXED SYNTAX: Double quotes for the index containing a single quote
-q1_26_myr = df.loc["Q1'26", "CPU_USD"] * mock_fx
-st.sidebar.metric("Simulated Unit Cost (MYR)", f"RM {q1_26_myr:.3f}")
