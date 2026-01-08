@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # --- 1. Page Config ---
-st.set_page_config(page_title="Case study 2026", layout="wide")
+st.set_page_config(page_title="Case Study 2026", layout="wide")
 
 # --- 2. Data Loading ---
 @st.cache_data
@@ -38,7 +38,7 @@ def load_data():
 
 df, df_raw, fixed_items, variable_items = load_data()
 
-st.title("📊 Factory Strategic Cost Audit Report (2024-2026)")
+st.title("📊  Cost Analysis ")
 
 # --- NEW: RAW DATA TOGGLE WINDOW ---
 with st.expander("🔍 Click to View Data Table"):
