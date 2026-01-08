@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # --- 1. Page Config ---
-st.set_page_config(page_title="Factory Financial Audit 2026", layout="wide")
+st.set_page_config(page_title="Case study 2026", layout="wide")
 
 # --- 2. Data Loading ---
 @st.cache_data
@@ -41,7 +41,7 @@ df, df_raw, fixed_items, variable_items = load_data()
 st.title("📊 Factory Strategic Cost Audit Report (2024-2026)")
 
 # --- NEW: RAW DATA TOGGLE WINDOW ---
-with st.expander("🔍 Click to View Raw Financial Data Table"):
+with st.expander("🔍 Click to View Data Table"):
     st.write("Full dataset including historical actuals and future forecasts:")
     st.dataframe(df_raw.style.format("{:,.0f}")) # 格式化数字，增加千分位
     st.caption("All values in USD, except Exchange Rate.")
@@ -49,7 +49,7 @@ with st.expander("🔍 Click to View Raw Financial Data Table"):
 st.divider()
 
 # --- MODULE 1: COST CLASSIFICATION ---
-st.header("1. Cost Classification Analysis")
+st.header("1. Cost Classification")
 c1, c2 = st.columns(2)
 with c1:
     st.subheader("📌 Fixed Cost Items")
