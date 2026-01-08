@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # --- 1. Page Config ---
-st.set_page_config(page_title="Case analysis", layout="wide")
+st.set_page_config(page_title="Factory Financial Audit 2026", layout="wide")
 
 # --- 2. Data Loading ---
 @st.cache_data
@@ -24,7 +24,9 @@ def load_data():
         "Q3'26": [132, 3784, 15, 356, 47, 3179, 59, 825, 250, 137, 55, 1700, 27484, 4.05],
         "Q4'26": [132, 4540, 15, 356, 47, 3697, 59, 989, 250, 165, 55, 1700, 32981, 4.05],
     }
-    df = pd.DataFrame(data).set_index("Metric").T
+    df_raw = pd.DataFrame(data).set_index("Metric")
+    df = df_raw.T
+    
     fixed_cols = ["Labor Cost - Engineer and Management", "Rent", "Janitor", "Machine Maintainance Cost", "Insurance", "Depreciation"]
     var_cols = ["Labor Cost - Operator", "Travel", "Company Transportation", "Utilities Electricity", "Material Cost", "Freight"]
     
@@ -32,11 +34,18 @@ def load_data():
     df['Variable_Cost'] = df[var_cols].sum(axis=1)
     df['Total_Cost'] = df['Fixed_Cost'] + df['Variable_Cost']
     df['CPU_USD'] = df['Total_Cost'] / df['Total Sales Qty']
-    return df, fixed_cols, var_cols
+    return df, df_raw, fixed_cols, var_cols
 
-df, fixed_items, variable_items = load_data()
+df, df_raw, fixed_items, variable_items = load_data()
 
-st.title("📊 Cost Report (2024-2026)")
+st.title("📊 Factory Strategic Cost Audit Report (2024-2026)")
+
+# --- NEW: RAW DATA TOGGLE WINDOW ---
+with st.expander("🔍 Click to View Raw Financial Data Table"):
+    st.write("Full dataset including historical actuals and future forecasts:")
+    st.dataframe(df_raw.style.format("{:,.0f}")) # 格式化数字，增加千分位
+    st.caption("All values in USD, except Exchange Rate.")
+
 st.divider()
 
 # --- MODULE 1: COST CLASSIFICATION ---
@@ -52,8 +61,8 @@ with c2:
 st.subheader("Cost vs. Production Volume Trends")
 # Normalized Trend Line
 df_norm = df[['Total_Cost', 'Total Sales Qty']].apply(lambda x: x / x.iloc[0] * 100)
-fig_trend = px.line(df_norm, title="Relative Growth: Total Cost vs. Sales Qty (Baseline = 100)")
-fig_trend.add_vline(x=8, line_dash="dash", line_color="red") # Q1'26 split
+fig_trend = px.line(df_norm, title="Relative Growth: Total Cost vs. Sales Qty (Baseline Q1'24 = 100)")
+fig_trend.add_vline(x=8, line_dash="dash", line_color="red") 
 st.plotly_chart(fig_trend, use_container_width=True)
 
 # --- MODULE 2: COST SAVING OPPORTUNITIES ---
@@ -68,7 +77,7 @@ with col_a:
 with col_b:
     st.plotly_chart(px.pie(values=[df.loc["Q1'26", 'Fixed_Cost'], df.loc["Q1'26", 'Variable_Cost']], names=['Fixed', 'Variable'], title="Q1'26 Forecast Structure", hole=0.4), use_container_width=True)
 
-# B. Cost Drivers (Waterfall/Bar)
+# B. Cost Drivers
 st.subheader("B. Cost Growth Contribution (Q4'25 to Q1'26)")
 q4_25 = df.loc["Q4'25", variable_items + fixed_items]
 q1_26 = df.loc["Q1'26", variable_items + fixed_items]
@@ -84,7 +93,7 @@ fig_fx.add_trace(go.Scatter(x=df.index, y=df['CPU_USD'], name="Unit Cost (USD)",
 fig_fx.update_layout(yaxis=dict(title="FX Rate"), yaxis2=dict(title="CPU USD", overlaying='y', side='right'))
 st.plotly_chart(fig_fx, use_container_width=True)
 
-st.success("**Summary of Saving Opportunities:** Focus on **Labor Efficiency** (biggest grower) and **Utility Consumption** during peak quarters. Manage **FX exposure** as the MYR strengthens, impacting local purchasing power.")
+st.success("**Summary of Saving Opportunities:** Focus on **Labor Efficiency** (biggest grower) and **Utility Consumption**. Manage **FX exposure** to mitigate unit cost fluctuations.")
 
 # --- MODULE 3: PROPOSAL OR RECOMMENDATION ---
 st.header("3. Strategic Recommendations & Challenges")
