@@ -4,7 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # --- 1. Page Configuration ---
-st.set_page_config(page_title="Factory Cost Audit Dashboard", layout="wide")
+st.set_page_config(page_title="Factory Cost Analysis Dashboard", layout="wide")
 
 # --- 2. Data Processing ---
 @st.cache_data
@@ -38,12 +38,12 @@ def load_and_process_data():
 df, fixed_items, variable_items = load_and_process_data()
 
 # --- 3. Header ---
-st.title("🏭 Factory Financial Cost Audit Dashboard")
+st.title("🏭 Factory Financial Cost Analysis Dashboard")
 st.markdown("### Strategic Cost Management (2024 - 2026)")
 st.divider()
 
 # --- 4. NEW: Cost Classification Display ---
-st.header("1. Cost Classification Definitions")
+st.header("1. Cost Classification")
 col_f, col_v = st.columns(2)
 
 with col_f:
