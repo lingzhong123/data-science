@@ -82,23 +82,20 @@ fig_bridge.update_layout(title="Total Spending Bridge (USD Variance)")
 st.plotly_chart(fig_bridge, use_container_width=True)
 
 # B. Efficiency of Scale
-st.subheader("B. Efficiency of Scale Analysis (2026)")
-ev_col1, ev_col2 = st.columns(2)
+st.subheader("B. Efficiency Mapping (2026)")
 quarters_26 = ["Q1'26", "Q2'26", "Q3'26", "Q4'26"]
 df_26 = df.loc[quarters_26].copy()
 df_26['Quarter'] = df_26.index
 
-with ev_col1:
-    fig_quad = px.scatter(df_26, x="Total Sales Qty", y="CPU_USD", text="Quarter", title="Efficiency Mapping: Volume vs. CPU", labels={"Total Sales Qty": "Sales Volume", "CPU_USD": "Unit Cost (USD)"}, color="CPU_USD", color_continuous_scale="RdYlGn_r")
-    fig_quad.add_hline(y=df_26["CPU_USD"].mean(), line_dash="dash", line_color="gray")
-    fig_quad.add_vline(x=df_26["Total Sales Qty"].mean(), line_dash="dash", line_color="gray")
-    st.plotly_chart(fig_quad, use_container_width=True)
-with ev_col2:
-    fig_scissors = go.Figure()
-    fig_scissors.add_trace(go.Bar(x=quarters_26, y=df_26["Total Sales Qty"], name="Volume", marker_color="lightblue", opacity=0.6))
-    fig_scissors.add_trace(go.Scatter(x=quarters_26, y=df_26["CPU_USD"], name="Unit Cost", yaxis="y2", line=dict(color='red', width=4)))
-    fig_scissors.update_layout(title="Cost-Volume Scissors Trend (2026)", yaxis2=dict(overlaying='y', side='right', range=[0.3, 0.45]))
-    st.plotly_chart(fig_scissors, use_container_width=True)
+# Expanded Quadrant chart
+fig_quad = px.scatter(df_26, x="Total Sales Qty", y="CPU_USD", text="Quarter", 
+                     title="Volume vs. Unit Cost Benchmark", 
+                     labels={"Total Sales Qty": "Sales Volume", "CPU_USD": "Unit Cost (USD)"}, 
+                     color="CPU_USD", color_continuous_scale="RdYlGn_r")
+fig_quad.add_hline(y=df_26["CPU_USD"].mean(), line_dash="dash", line_color="gray")
+fig_quad.add_vline(x=df_26["Total Sales Qty"].mean(), line_dash="dash", line_color="gray")
+fig_quad.update_traces(textposition='top center', marker=dict(size=15))
+st.plotly_chart(fig_quad, use_container_width=True)
 
 # C. CPU Driver Drill-Down
 st.subheader("C. Unit Cost (CPU) Driver Analysis")
@@ -112,9 +109,7 @@ for metric in cpu_drivers_26.index:
 fig_cpu_drill.update_layout(barmode='stack', title="2026 Unit Cost (CPU) Breakdown by Item", xaxis_title="Quarter", yaxis_title="Cost per Unit (USD)", hovermode="x unified", height=600, legend=dict(orientation="h", y=-0.5))
 st.plotly_chart(fig_cpu_drill, use_container_width=True)
 
-
-
-st.info("💡 **Cost Insight:** The 'spikes' in Q2/Q3 CPU are primarily driven by **Fixed Cost Under-absorption** (e.g., Depreciation, Rent, and Eng Labor) when sales volume falls below the average line.")
+st.info("💡 **Cost Insight:** The 'spikes' in Q2/Q3 CPU are primarily driven by **Fixed Cost Under-absorption** (e.g., Depreciation and Rent) when sales volume falls below the average line.")
 
 # D. FX & Unit Cost Trend
 st.subheader("D. FX Exposure & Unit Cost Trend")
