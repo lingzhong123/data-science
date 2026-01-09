@@ -131,7 +131,7 @@ with ev_col2:
 st.markdown("""
 **Audit Observations based on above Charts:**
 * **Q1'26 Benchmark:** High Volume successfully drives CPU to its lowest point ($0.34).
-* **Q2/Q3 Risk:** Drastic volume drop creates a 'Scissors Gap', forcing CPU to peak at $0.37+ due to fixed cost under-absorption.
+* **Q2/Q3 Risk:** Drastic volume drop, forcing CPU to peak at $0.37+ due to fixed cost under-absorption.
 """)
 
 # Recommendations Table
