@@ -97,7 +97,7 @@ st.plotly_chart(fig_fx, use_container_width=True)
 st.header("3. Strategic Recommendations & Challenges")
 
 # --- NEW: Visual Evidence for Recommendations ---
-st.subheader("Visual Audit: 2026 Efficiency & Economies of Scale")
+st.subheader("Visual Efficiency of Scale in 2026")
 ev_col1, ev_col2 = st.columns(2)
 
 # Prepare 2026 Analysis Data
