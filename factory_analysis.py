@@ -38,7 +38,7 @@ def load_data():
 
 df, df_raw, fixed_items, variable_items = load_data()
 
-st.title("📊 Factory Cost & Audit Analysis")
+st.title("📊 Factory Cost Analysis Dashboard")
 
 with st.expander("🔍 View Raw Financial Data"):
     st.dataframe(df_raw.style.format("{:,.0f}"))
@@ -66,8 +66,10 @@ for col in df_all_indices.columns:
 fig_all.update_layout(title="Cost Item Variance vs. Volume Growth", hovermode="x unified", legend=dict(orientation="h", y=-0.5))
 st.plotly_chart(fig_all, use_container_width=True)
 
-# --- MODULE 2: COST SAVING OPPORTUNITIES ---
-st.header("2. Cost Saving Opportunities")
+# --- MODULE 2: COST SAVING OPPORTUNITIES & EFFICIENCY ---
+st.header("2. Cost Saving Opportunities & Efficiency Analysis")
+
+# A. Spending Bridge
 st.subheader("A. Variance Analysis: Q4'25 vs. Q1'26 Spending Bridge")
 q4_vals = df.loc["Q4'25", fixed_items + variable_items]
 q1_vals = df.loc["Q1'26", fixed_items + variable_items]
@@ -79,20 +81,13 @@ fig_bridge = go.Figure(go.Waterfall(name="Spending Bridge", measure=measure, x=x
 fig_bridge.update_layout(title="Total Spending Bridge (USD Variance)")
 st.plotly_chart(fig_bridge, use_container_width=True)
 
-col_pie1, col_pie2 = st.columns(2)
-actual_avg = df.loc["Q1'24":"Q4'25"].mean()
-with col_pie1:
-    st.plotly_chart(px.pie(values=[actual_avg['Fixed_Cost'], actual_avg['Variable_Cost']], names=['Fixed', 'Variable'], title="Historical Avg Structure", hole=0.4), use_container_width=True)
-with col_pie2:
-    st.plotly_chart(px.pie(values=[df.loc["Q1'26", 'Fixed_Cost'], df.loc["Q1'26", 'Variable_Cost']], names=['Fixed', 'Variable'], title="Q1'26 Forecast Structure", hole=0.4), use_container_width=True)
-
-# --- MODULE 3: STRATEGIC EFFICIENCY ---
-st.header("3. Efficiency of Scale Analysis")
-st.subheader("2026 Volume vs. Unit Cost Benchmark")
+# B. Efficiency of Scale
+st.subheader("B. Efficiency of Scale Analysis (2026)")
 ev_col1, ev_col2 = st.columns(2)
 quarters_26 = ["Q1'26", "Q2'26", "Q3'26", "Q4'26"]
 df_26 = df.loc[quarters_26].copy()
 df_26['Quarter'] = df_26.index
+
 with ev_col1:
     fig_quad = px.scatter(df_26, x="Total Sales Qty", y="CPU_USD", text="Quarter", title="Efficiency Mapping: Volume vs. CPU", labels={"Total Sales Qty": "Sales Volume", "CPU_USD": "Unit Cost (USD)"}, color="CPU_USD", color_continuous_scale="RdYlGn_r")
     fig_quad.add_hline(y=df_26["CPU_USD"].mean(), line_dash="dash", line_color="gray")
@@ -105,44 +100,39 @@ with ev_col2:
     fig_scissors.update_layout(title="Cost-Volume Scissors Trend (2026)", yaxis2=dict(overlaying='y', side='right', range=[0.3, 0.45]))
     st.plotly_chart(fig_scissors, use_container_width=True)
 
-# --- NEW: MODULE 4: CPU DRIVER DRILL-DOWN ---
-st.header("4. Unit Cost (CPU) Driver Analysis")
-st.subheader("What Drives the Unit Cost Higher in 2026?")
-
-# Calculate CPU per Item for 2026
+# C. CPU Driver Drill-Down
+st.subheader("C. Unit Cost (CPU) Driver Analysis")
 costs_only = df_raw.drop(["Total Sales Qty", "Exchange Rate"])
 sales_qty_26 = df_raw.loc["Total Sales Qty", quarters_26]
 cpu_drivers_26 = costs_only[quarters_26].div(sales_qty_26, axis=1)
 
-# Visualization: Stacked Bar for CPU Contribution
 fig_cpu_drill = go.Figure()
 for metric in cpu_drivers_26.index:
-    fig_cpu_drill.add_trace(go.Bar(
-        name=metric, x=quarters_26, y=cpu_drivers_26.loc[metric],
-        hovertemplate=f"Item: {metric}<br>CPU Contribution: " + "$%{y:.4f}<extra></extra>"
-    ))
-
-fig_cpu_drill.update_layout(
-    barmode='stack', title="2026 Unit Cost (CPU) Breakdown by Item",
-    xaxis_title="Quarter", yaxis_title="Cost per Unit (USD)",
-    hovermode="x unified", height=600, legend=dict(orientation="h", y=-0.5)
-)
+    fig_cpu_drill.add_trace(go.Bar(name=metric, x=quarters_26, y=cpu_drivers_26.loc[metric]))
+fig_cpu_drill.update_layout(barmode='stack', title="2026 Unit Cost (CPU) Breakdown by Item", xaxis_title="Quarter", yaxis_title="Cost per Unit (USD)", hovermode="x unified", height=600, legend=dict(orientation="h", y=-0.5))
 st.plotly_chart(fig_cpu_drill, use_container_width=True)
 
-st.success("""
-**Audit Insight:** In Q2/Q3, notice how the **Depreciation** and **Labor (Eng)** blocks grow taller. 
-This is not due to higher spending, but **lower volume** failing to absorb fixed costs.
-""")
 
-# --- FINAL RECOMMENDATIONS ---
+
+st.info("💡 **Cost Insight:** The 'spikes' in Q2/Q3 CPU are primarily driven by **Fixed Cost Under-absorption** (e.g., Depreciation, Rent, and Eng Labor) when sales volume falls below the average line.")
+
+# D. FX & Unit Cost Trend
+st.subheader("D. FX Exposure & Unit Cost Trend")
+fig_fx = go.Figure()
+fig_fx.add_trace(go.Scatter(x=df.index, y=df['Exchange Rate'], name="USD/MYR Rate", yaxis="y1"))
+fig_fx.add_trace(go.Scatter(x=df.index, y=df['CPU_USD'], name="CPU (USD)", yaxis="y2"))
+fig_fx.update_layout(yaxis=dict(title="Exchange Rate"), yaxis2=dict(title="Unit Cost", overlaying='y', side='right'))
+st.plotly_chart(fig_fx, use_container_width=True)
+
+# --- MODULE 3: STRATEGIC RECOMMENDATIONS ---
 st.divider()
-st.header("5. Strategic Recommendations")
+st.header("3. Strategic Recommendations")
 
 recommendations = [
     {"Category": "Labor Cost - Operator", "Red Flags": "High Q1'26 forecast despite new equipment; efficiency gains not visible.", "Proposed Action": "Audit OT rates and verify equipment throughput capacity vs actual output."},
     {"Category": "Total Sales Qty", "Red Flags": "Q1'26 growth deviates from historical seasonal trends.", "Proposed Action": "Confirm business drivers for Q1 peak or adjust forecast to align with historical seasonality."},
-    {"Category": "Travel & Transport", "Red Flags": "Static annual values suggest budget placeholders rather than activity-based planning.", "Proposed Action": "Request itemized 2026 travel plan to justify fixed spending."},
-    {"Category": "Maintenance", "Red Flags": "Static at $250 despite increasing depreciation and production volume.", "Proposed Action": "Verify risk of equipment failure due to under-budgeted maintenance amid higher usage."}
+    {"Category": "Travel & Transport", "Red Flags": "Static annual values suggest budget placeholders.", "Proposed Action": "Request itemized 2026 travel plan to justify fixed spending."},
+    {"Category": "Maintenance", "Red Flags": "Static at $250 despite increasing depreciation and production volume.", "Proposed Action": "Verify risk of equipment failure due to under-budgeted maintenance."}
 ]
 
 st.table(pd.DataFrame(recommendations))
