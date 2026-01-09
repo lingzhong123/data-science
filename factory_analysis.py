@@ -27,7 +27,7 @@ def load_data():
     df_raw = pd.DataFrame(data).set_index("Metric")
     df = df_raw.T
     
-    fixed_cols = ["Labor Cost - Engineer and Management", "Rent", "Janitor",  "Company Transportation", "Machine Maintainance Cost", "Insurance", "Depreciation"]
+    fixed_cols = ["Labor Cost - Engineer and Management", "Rent", "Janitor", "Company Transportation", "Machine Maintainance Cost", "Insurance", "Depreciation"]
     var_cols = ["Labor Cost - Operator", "Travel", "Utilities Electricity", "Material Cost", "Freight"]
     
     df['Fixed_Cost'] = df[fixed_cols].sum(axis=1)
@@ -38,7 +38,7 @@ def load_data():
 
 df, df_raw, fixed_items, variable_items = load_data()
 
-st.title("📊  Cost Analysis (2024-2026)")
+st.title("📊 Cost Analysis (2024-2026)")
 
 with st.expander("🔍 View Raw Financial Data"):
     st.dataframe(df_raw.style.format("{:,.0f}"))
@@ -46,7 +46,7 @@ with st.expander("🔍 View Raw Financial Data"):
 st.divider()
 
 # --- MODULE 1: COST CLASSIFICATION ---
-st.header("1. Cost Classification ")
+st.header("1. Cost Classification")
 c1, c2 = st.columns(2)
 with c1:
     st.info("**Fixed Costs:**\n" + "\n".join([f"- {i}" for i in fixed_items]))
@@ -59,33 +59,26 @@ st.plotly_chart(px.line(df_norm, title="Growth Index: Total Cost vs. Sales Qty (
 # --- MODULE 2: COST SAVING OPPORTUNITIES ---
 st.header("2. Cost Saving Opportunities")
 
-# NEW: Variance Analysis Bridge Chart
 st.subheader("A. Variance Analysis: Q4'25 vs. Q1'26 Spending Bridge")
-
-# Calculate Bridge Data
 q4_vals = df.loc["Q4'25", fixed_items + variable_items]
 q1_vals = df.loc["Q1'26", fixed_items + variable_items]
 bridge_diff = (q1_vals - q4_vals).to_dict()
 
-# Prepare Waterfall Components
 x_labels = ["Q4'25 Total"] + list(bridge_diff.keys()) + ["Q1'26 Total"]
 measure = ["absolute"] + ["relative"] * len(bridge_diff) + ["total"]
-y_values = [df.loc["Q4'25", 'Total_Cost']] + list(bridge_diff.values()) + [0] # 0 for total calc
+y_values = [df.loc["Q4'25", 'Total_Cost']] + list(bridge_diff.values()) + [0]
 
 fig_bridge = go.Figure(go.Waterfall(
     name="Spending Bridge", orientation="v",
     measure=measure, x=x_labels, y=y_values,
     connector={"line":{"color":"rgb(63, 63, 63)"}},
-    increasing={"marker":{"color":"#EF553B"}}, # Red for cost increase
-    decreasing={"marker":{"color":"#00CC96"}}, # Green for savings
+    increasing={"marker":{"color":"#EF553B"}}, 
+    decreasing={"marker":{"color":"#00CC96"}}, 
     totals={"marker":{"color":"#636EFA"}}
 ))
 fig_bridge.update_layout(title="Total Spending Bridge (USD Increase/Decrease)", showlegend=False)
 st.plotly_chart(fig_bridge, use_container_width=True)
 
-
-
-# Structural Shift and FX Exposure (Combined in columns for space)
 col_pie1, col_pie2 = st.columns(2)
 actual_avg = df.loc["Q1'24":"Q4'25"].mean()
 with col_pie1:
@@ -100,11 +93,48 @@ fig_fx.add_trace(go.Scatter(x=df.index, y=df['CPU_USD'], name="CPU (USD)", yaxis
 fig_fx.update_layout(yaxis=dict(title="Exchange Rate"), yaxis2=dict(title="Unit Cost", overlaying='y', side='right'))
 st.plotly_chart(fig_fx, use_container_width=True)
 
-st.success("**Key Opportunities:** The Bridge reveals **Labor** and **Utilities** as the primary drivers of Q1 budget variance. Management should prioritize efficiency audits in these two areas.")
-
 # --- MODULE 3: PROPOSAL OR RECOMMENDATION ---
 st.header("3. Strategic Recommendations & Challenges")
 
+# --- NEW: Visual Evidence for Recommendations ---
+st.subheader("Visual Audit: 2026 Efficiency & Economies of Scale")
+ev_col1, ev_col2 = st.columns(2)
+
+# Prepare 2026 Analysis Data
+quarters_26 = ["Q1'26", "Q2'26", "Q3'26", "Q4'26"]
+df_26 = df.loc[quarters_26].copy()
+df_26['Quarter'] = df_26.index
+
+with ev_col1:
+    # 1. Quadrant Analysis
+    fig_quad = px.scatter(df_26, x="Total Sales Qty", y="CPU_USD", text="Quarter",
+                         title="Efficiency Mapping: Volume vs. CPU",
+                         labels={"Total Sales Qty": "Sales Volume", "CPU_USD": "Unit Cost (USD)"},
+                         color="CPU_USD", color_continuous_scale="RdYlGn_r")
+    fig_quad.add_hline(y=df_26["CPU_USD"].mean(), line_dash="dash", line_color="gray")
+    fig_quad.add_vline(x=df_26["Total Sales Qty"].mean(), line_dash="dash", line_color="gray")
+    fig_quad.update_traces(textposition='top center', marker=dict(size=12))
+    st.plotly_chart(fig_quad, use_container_width=True)
+
+with ev_col2:
+    # 2. Scissors Trend
+    fig_scissors = go.Figure()
+    fig_scissors.add_trace(go.Bar(x=quarters_26, y=df_26["Total Sales Qty"], name="Volume", marker_color="lightblue", opacity=0.6))
+    fig_scissors.add_trace(go.Scatter(x=quarters_26, y=df_26["CPU_USD"], name="Unit Cost", yaxis="y2", line=dict(color='red', width=4)))
+    fig_scissors.update_layout(title="Cost-Volume Scissors Trend (2026)",
+                             yaxis=dict(title="Volume"),
+                             yaxis2=dict(title="Unit Cost (USD)", overlaying='y', side='right', range=[0.3, 0.45]))
+    st.plotly_chart(fig_scissors, use_container_width=True)
+
+
+
+st.markdown("""
+**Audit Observations based on above Charts:**
+* **Q1'26 Benchmark:** High Volume successfully drives CPU to its lowest point ($0.34).
+* **Q2/Q3 Risk:** Drastic volume drop creates a 'Scissors Gap', forcing CPU to peak at $0.37+ due to fixed cost under-absorption.
+""")
+
+# Recommendations Table
 recommendations = [
     {"Category": "Labor Cost - Operator", "Red Flags": "High Q1'26 forecast despite new equipment; similar Q3/Q4 patterns in past.", "Proposed Action": "Check for overestimated OT or underestimated efficiency gains from new equipment."},
     {"Category": "Total Sales Qty", "Red Flags": "Q1'26 growth deviates from historical seasonality.", "Proposed Action": "Provide business drivers for Q1 peak (e.g., new orders) or align with history."},
